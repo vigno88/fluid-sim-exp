@@ -19,6 +19,19 @@ typedef struct FluidGrid FluidGrid;
 
 FluidGrid* grid;
 
+static void advect(int b, float *d, float *d0,  float *velocX, float *velocY, float dt, int N);
+FluidGrid *FluidGridCreate(int size, float* grid_d);
+void FluidGridFree(FluidGrid *grid);
+void FluidGridAddDensity(FluidGrid* grid, int x, int y, float amount);
+void FluidGridAddVelocity(FluidGrid *grid, int x, int y, float amountX, float amountY);
+void FluidGridStep(FluidGrid *grid);
+static void set_bnd(int b, float *x, int N);
+static void lin_solve(int b, float *x, float *x0, float a, float c, int iter, int N);
+static void diffuse (int b, float *x, float *x0, float diff, float dt, int iter, int N);
+static void project(float *velocX, float *velocY, float *p, float *div, int iter, int N);
+static void advect(int b, float *d, float *d0,  float *velocX, float *velocY, float dt, int N);
+
+
 void solver_init(int size,float* grid_d) {
     grid = FluidGridCreate(size, grid_d);
     FluidGridAddDensity(grid, 5, 5, 0.9);
@@ -44,7 +57,8 @@ FluidGrid *FluidGridCreate(int size, float* grid_d) {
     grid->Vy0 = (float*) calloc(N * N, sizeof(float));
     
     return grid;
- }
+}
+
 void FluidGridFree(FluidGrid *grid) {
     delete(grid->s);
     
@@ -128,10 +142,12 @@ static void lin_solve(int b, float *x, float *x0, float a, float c, int iter, in
         set_bnd(b, x, N);
     }
 }
+
 static void diffuse (int b, float *x, float *x0, float diff, float dt, int iter, int N) {
     float a = dt * diff * (N - 2) * (N - 2);
     lin_solve(b, x, x0, a, 1 + 6 * a, iter, N);
 }
+
 static void project(float *velocX, float *velocY, float *p, float *div, int iter, int N) {
     for (int j = 1; j < N - 1; j++) {
         for (int i = 1; i < N - 1; i++) {
@@ -157,6 +173,7 @@ static void project(float *velocX, float *velocY, float *p, float *div, int iter
     set_bnd(1, velocX, N);
     set_bnd(2, velocY, N);
 }
+
 static void advect(int b, float *d, float *d0,  float *velocX, float *velocY, float dt, int N){
     float i0, i1, j0, j1, k0, k1;
     
