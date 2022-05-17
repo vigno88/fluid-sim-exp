@@ -65,6 +65,8 @@ warning: color-correct spaces don't work in VMWare, because mesa doesn't support
 #include "include/core/SkSurface.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include "util.h"
 
 //uncomment the two lines below to enable correct color spaces
 //#define GL_FRAMEBUFFER_SRGB 0x8DB9
@@ -72,6 +74,7 @@ warning: color-correct spaces don't work in VMWare, because mesa doesn't support
 
 GrDirectContext* sContext = nullptr;
 SkSurface* sSurface = nullptr;
+const int screenWidth = 900;
 
 void error_callback(int error, const char* description) {
 	fputs(description, stderr);
@@ -99,7 +102,7 @@ void init_skia(int w, int h) {
 		framebufferInfo);
 
 	//(replace line below with this one to enable correct color spaces) sSurface = SkSurface::MakeFromBackendRenderTarget(sContext, backendRenderTarget, kBottomLeft_GrSurfaceOrigin, colorType, SkColorSpace::MakeSRGB(), nullptr).release();
-	sSurface = SkSurface::MakeFromBackendRenderTarget(sContext, backendRenderTarget, kTopLeft_GrSurfaceOrigin, colorType, nullptr, nullptr).release();
+	sSurface = SkSurface::MakeFromBackendRenderTarget(sContext, backendRenderTarget, kBottomLeft_GrSurfaceOrigin, colorType, nullptr, nullptr).release();
 	if (sSurface == nullptr) abort();
 }
 
@@ -124,14 +127,23 @@ void init_glfw() {
 	glfwWindowHint(GLFW_DEPTH_BITS, 0);
 }
 
-const int kWidth = 960;
-const int kHeight = 640;
+void draw_grid(float* grid, SkCanvas* canvas, int size) {
+	float w = ((float) screenWidth) / size;
+	SkPaint paint({0.058823,0.3686274, 0.6117647,1});
+	for(int j = 0; j < size; j++) {
+		for(int i = 0; i < size; i++) {
+			paint.setAlpha(grid[index(i,j,size)]);
+			canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
+		}
+	}
+}
 
+ 
 int main(void) {
 	// Setup GLFW
 	GLFWwindow* window;
     init_glfw();
-	window = glfwCreateWindow(kWidth, kHeight, "Simple example", NULL, NULL);
+	window = glfwCreateWindow(screenWidth, screenWidth, "Simple example", NULL, NULL);
 	if (!window) {
 		glfwTerminate();
 		exit(EXIT_FAILURE);
@@ -139,32 +151,37 @@ int main(void) {
 	glfwMakeContextCurrent(window);
 	//(uncomment to enable correct color spaces) glEnable(GL_FRAMEBUFFER_SRGB);
 
-	init_skia(kWidth, kHeight);
+	init_skia(screenWidth, screenWidth);
 
 	glfwSwapInterval(1);
 	glfwSetKeyCallback(window, key_callback);
 
 	// Draw to the surface via its SkCanvas.
 	SkCanvas* canvas = sSurface->getCanvas(); // We don't manage this pointer's lifetime.
-	SkRect rect = {100,200,300,500};
 	
+	// Create grid Skia points
+	int size = 30;
+	float* grid_d = (float*) calloc(30*30, sizeof(float));
+
+
 	while (!glfwWindowShouldClose(window)) {
 		//glfwWaitEvents();
 		
 		SkPaint paint;
 		paint.setColor(SK_ColorWHITE);
 		canvas->drawPaint(paint);
-		paint.setColor(SK_ColorBLUE);
-		canvas->drawRect(rect, paint);
+/*		paint.setColor(SK_ColorBLUE);
+		canvas->drawCircle(p,1, paint);
+*/
+		draw_grid(grid_d, canvas, 30);
 		sContext->flush();
 		
 		glfwSwapBuffers(window);
 
-		rect.offset(2,0);
 	}
 
 	cleanup_skia();
-
+	free(grid_d);
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	exit(EXIT_SUCCESS);
