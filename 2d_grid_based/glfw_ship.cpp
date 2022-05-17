@@ -99,7 +99,7 @@ void init_skia(int w, int h) {
 		framebufferInfo);
 
 	//(replace line below with this one to enable correct color spaces) sSurface = SkSurface::MakeFromBackendRenderTarget(sContext, backendRenderTarget, kBottomLeft_GrSurfaceOrigin, colorType, SkColorSpace::MakeSRGB(), nullptr).release();
-	sSurface = SkSurface::MakeFromBackendRenderTarget(sContext, backendRenderTarget, kBottomLeft_GrSurfaceOrigin, colorType, nullptr, nullptr).release();
+	sSurface = SkSurface::MakeFromBackendRenderTarget(sContext, backendRenderTarget, kTopLeft_GrSurfaceOrigin, colorType, nullptr, nullptr).release();
 	if (sSurface == nullptr) abort();
 }
 
@@ -128,8 +128,9 @@ const int kWidth = 960;
 const int kHeight = 640;
 
 int main(void) {
-    init_glfw();
+	// Setup GLFW
 	GLFWwindow* window;
+    init_glfw();
 	window = glfwCreateWindow(kWidth, kHeight, "Simple example", NULL, NULL);
 	if (!window) {
 		glfwTerminate();
@@ -145,17 +146,21 @@ int main(void) {
 
 	// Draw to the surface via its SkCanvas.
 	SkCanvas* canvas = sSurface->getCanvas(); // We don't manage this pointer's lifetime.
-
+	SkRect rect = {100,200,300,500};
+	
 	while (!glfwWindowShouldClose(window)) {
-		glfwWaitEvents();
+		//glfwWaitEvents();
+		
 		SkPaint paint;
 		paint.setColor(SK_ColorWHITE);
 		canvas->drawPaint(paint);
 		paint.setColor(SK_ColorBLUE);
-		canvas->drawRect({100, 200, 300, 500}, paint);
+		canvas->drawRect(rect, paint);
 		sContext->flush();
-
+		
 		glfwSwapBuffers(window);
+
+		rect.offset(2,0);
 	}
 
 	cleanup_skia();
