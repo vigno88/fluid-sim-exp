@@ -67,6 +67,8 @@ warning: color-correct spaces don't work in VMWare, because mesa doesn't support
 #include <stdlib.h>
 #include <math.h>
 #include "util.h"
+#include "fluidSolver_1.h"
+#include <unistd.h>
 
 //uncomment the two lines below to enable correct color spaces
 //#define GL_FRAMEBUFFER_SRGB 0x8DB9
@@ -132,8 +134,11 @@ void draw_grid(float* grid, SkCanvas* canvas, int size) {
 	SkPaint paint({0.058823,0.3686274, 0.6117647,1});
 	for(int j = 0; j < size; j++) {
 		for(int i = 0; i < size; i++) {
-			paint.setAlpha(grid[index(i,j,size)]);
-			canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
+			if(grid[index(i,j,size)] > 0) {
+				printf("value: %f\n", grid[index(i,j,size)]);
+				paint.setAlphaf(grid[index(i,j,size)]);
+				canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
+			}
 		}
 	}
 }
@@ -161,7 +166,18 @@ int main(void) {
 	
 	// Create grid Skia points
 	int size = 30;
-	float* grid_d = (float*) calloc(30*30, sizeof(float));
+	float* grid_d = (float*) calloc(size*size, sizeof(float));
+	solver_init(grid_d, size);
+
+	// Draw initial grid
+	SkPaint paint;
+	paint.setColor(SK_ColorWHITE);
+	canvas->drawPaint(paint);
+	draw_grid(grid_d, canvas, size);
+
+	sContext->flush();
+	printf("Sum grid: %f\n", sum(grid_d, size));	
+	glfwSwapBuffers(window);
 
 
 	while (!glfwWindowShouldClose(window)) {
@@ -173,11 +189,12 @@ int main(void) {
 /*		paint.setColor(SK_ColorBLUE);
 		canvas->drawCircle(p,1, paint);
 */
+		solver_step();
 		draw_grid(grid_d, canvas, 30);
 		sContext->flush();
-		
+		printf("Sum grid: %f\n", sum(grid_d, size));	
 		glfwSwapBuffers(window);
-
+		sleep(1);
 	}
 
 	cleanup_skia();

@@ -1,4 +1,27 @@
-#include "fluidSolver.h"
+#ifndef FLUID_H
+#define FLUID_H
+
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "util.h"
+
+#define DIFFUSION  0.1
+#define VISCOSITY  0.1
+#define DT 0.1
+
+// Pass a grid of points to the solver, the solver will update those points 
+void solver_init(float* grid, int size);
+
+// This will update the grid passed as a pointer at the init
+void solver_step();
+
+// This will delete the ressources acquired for the grid
+void solver_delete();
+
+
+
+// Implementations 
 
 struct FluidGrid {
     int size;
@@ -31,12 +54,35 @@ static void diffuse (int b, float *x, float *x0, float diff, float dt, int iter,
 static void project(float *velocX, float *velocY, float *p, float *div, int iter, int N);
 static void advect(int b, float *d, float *d0,  float *velocX, float *velocY, float dt, int N);
 
-
-void solver_init(int size,float* grid_d) {
-    grid = FluidGridCreate(size, grid_d);
-    FluidGridAddDensity(grid, 5, 5, 0.9);
+float sum(float *array, int size) {
+    float sum = 0;
+    for(int i = 0; i < size; i++) {
+        for(int j = 0; j < size; j++) {
+            sum += array[index(j,i,size)];
+        }
+    }
+    return sum;
 }
 
+void solver_init(float* grid_d,int size) {
+    grid = FluidGridCreate(size, grid_d);
+
+    for (int i = 5; i < 15; i++) {
+        for (int j = 5; j < 15;j++) {
+            FluidGridAddDensity(grid, i, j, 1);
+        }
+    }
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size;j++) {
+            FluidGridAddVelocity(grid, j,i,2,0);
+        }
+    }
+}
+
+void solver_step() {
+    FluidGridStep(grid);
+  //  printf("sum grid: %f\n", sum(grid->density,grid->size));
+}
 
 FluidGrid *FluidGridCreate(int size, float* grid_d) {
     FluidGrid *grid = new FluidGrid(); 
@@ -223,3 +269,5 @@ static void advect(int b, float *d, float *d0,  float *velocX, float *velocY, fl
     }
     set_bnd(b, d, N);
 }
+
+#endif
