@@ -211,20 +211,10 @@ float sum(float *array, int N) {
 
 void solver_init(float* grid_d,int size) {
     grid = FluidGridCreate(size, grid_d);
-
-    for (int i = 5; i < 15; i++) {
-        for (int j = 5; j < 15;j++) {
-            FluidGridAddDensity(grid, i, j, 1);
-        }
-    }
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size;j++) {
-            FluidGridAddVelocity(grid, j,i,2,0);
-        }
-    }
 }
 
 void solver_step() {
-    FluidGridStep(grid);
-  //  printf("sum grid: %f\n", sum(grid->density,grid->size));
+    vel_step(grid->N, grid->u, grid->v, grid->u_prev, grid->v_prev, grid->visc, grid->dt);
+    dens_step(grid->N, grid->dens, grid->dens_prev, grid->u, grid->v, grid->diff, grid->dt);
 }
+#endif
