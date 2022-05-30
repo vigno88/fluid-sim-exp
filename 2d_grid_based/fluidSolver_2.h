@@ -226,20 +226,6 @@ void set_bnd(int N, int b, float *x)  {
 
 void solver_init(float* grid_d,int N) {
     grid = FluidGridCreate(N, grid_d);
-    float* initial_dens = (float*) calloc((N+2) * (N+2), sizeof(float));
-    initial_dens[IX(15,15)] = 10.0;
-    initial_dens[IX(17,15)] = 10.0;
-    initial_dens[IX(16,15)] = 10.0;
-    add_source(N, grid->dens, initial_dens, grid->dt);
-
-    float* initial_velx = (float*) calloc((N+2) * (N+2), sizeof(float));
-    initial_velx[IX(15,15)] = -10.0;
-    initial_velx[IX(16,15)] = -10.0;
-    initial_velx[IX(17,15)] = -10.0;
-
-    add_source(N,grid->u_prev,initial_velx, grid->dt);
-    //add_source(N,grid->v_prev,initial_velx, grid->dt);
-
 }
 
 void solver_step() {

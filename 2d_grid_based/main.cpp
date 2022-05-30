@@ -55,7 +55,7 @@ eventually, you will want color-correct spaces, and there are 5 places below (Ct
 warning: color-correct spaces don't work in VMWare, because mesa doesn't support it.
 */
 
-#include "GLFW/glfw3.h"
+#include <GLFW/glfw3.h>
 #define SK_GL
 #include "include/gpu/GrBackendSurface.h"
 #include "include/gpu/GrDirectContext.h"
@@ -74,7 +74,7 @@ warning: color-correct spaces don't work in VMWare, because mesa doesn't support
 //#define GL_FRAMEBUFFER_SRGB 0x8DB9
 //#define GL_SRGB8_ALPHA8 0x8C43
 
-#define SIZE 300
+#define SIZE 30
 
 GrDirectContext* sContext = nullptr;
 SkSurface* sSurface = nullptr;
@@ -86,7 +86,7 @@ void error_callback(int error, const char* description) {
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, GL_TRUE);
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
 void init_skia(int w, int h) {
@@ -163,12 +163,13 @@ bool rightPressed = false;
 bool leftPressed = false;
 
 static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos) {
-	xO = x; yO = y;
-	x = xpos; y = ypos;
+/*	xO = x; yO = y;
+	x = xpos; y = ypos;*/
 }
 
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+	printf("fdas");
+/*	if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
 		rightPressed = true;
 	}
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
@@ -179,7 +180,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	}
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
 		rightPressed = false;
-	}
+	}*/
 }
 
 void process_input(FluidGrid* grid) {
@@ -213,20 +214,21 @@ int main(void) {
 	// Setup GLFW
 	GLFWwindow* window;
     init_glfw();
-	window = glfwCreateWindow(screenWidth, screenWidth, "Simple example", NULL, NULL);
+	window = glfwCreateWindow(screenWidth, screenWidth, "Simple example",  glfwGetPrimaryMonitor(), NULL);
 	if (!window) {
 		glfwTerminate();
 		exit(EXIT_FAILURE);
 	}
+	glfwSetKeyCallback(window, key_callback);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
+//	glfwSetCursorPosCallback(window, mouse_position_callback);
+	
 	glfwMakeContextCurrent(window);
 	//(uncomment to enable correct color spaces) glEnable(GL_FRAMEBUFFER_SRGB);
 
 	init_skia(screenWidth, screenWidth);
 
 	glfwSwapInterval(1);
-	glfwSetKeyCallback(window, key_callback);
-	glfwSetMouseButtonCallback(window, mouse_button_callback);
-	glfwSetCursorPosCallback(window, mouse_position_callback);
 
 	// Draw to the surface via its SkCanvas.
 	SkCanvas* canvas = sSurface->getCanvas(); // We don't manage this pointer's lifetime.
@@ -249,7 +251,7 @@ int main(void) {
 
 	while (!glfwWindowShouldClose(window)) {
 		//glfwWaitEvents();
-
+		
 		// Draw blank screen 	
 		SkPaint paint;
 		paint.setColor(SK_ColorWHITE);
@@ -259,10 +261,11 @@ int main(void) {
 		process_input(grid);
 
 		solver_step();
-		draw_grid(grid_d, canvas, 30);
+		draw_grid(grid_d, canvas, SIZE);
 		sContext->flush();
 		// printf("Sum grid: %f\n", sum(grid_d, SIZE));	
 		glfwSwapBuffers(window);
+		glfwPollEvents();
 		//sleep(1);
 	}
 
