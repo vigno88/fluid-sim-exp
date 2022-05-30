@@ -141,8 +141,9 @@ void advect(int N, int b, float *d, float *d0, float *u, float *v, float dt) {
             int j0 = (int) y;
             int j1 = j0+1;
             // Linear interpolation of the 4 surrounding cell
-            float s1 = x - i0; float s0 = 1 - s1; float t1 = y - j0; float t0 = 1-t0;
-            d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+s1*(t0*d0[i1,j0]+t1*d0[IX(i1,j0)]);
+            float s1 = x - i0; float s0 = 1 - s1; float t1 = y - j0; float t0 = 1-t1;
+            d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+ s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
+            d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+ s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
         }
     }
     set_bnd(N,b,d);
@@ -191,7 +192,7 @@ void project(int N, float *u, float *v, float *p, float *div) {
     // Gauss-seidel to solve the pressure at each cell
     for(int k = 0; k < 20; k++) {
         for(int i = 1; i<=N; i++) {
-            for (int j = 0; j <= N; j++ ) {
+            for (int j = 1; j <= N; j++ ) {
                 p[IX(i,j)] = (div[IX(i,j)] + p[IX(i-1,j)] + p[IX(i+1,j)] +  p[IX(i,j-1)] + p[IX(i,j+1)])/4;
             }
         }

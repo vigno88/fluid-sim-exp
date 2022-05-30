@@ -70,11 +70,13 @@ warning: color-correct spaces don't work in VMWare, because mesa doesn't support
 #include "fluidSolver_2.h"
 #include <unistd.h>
 
+
+
 //uncomment the two lines below to enable correct color spaces
 //#define GL_FRAMEBUFFER_SRGB 0x8DB9
 //#define GL_SRGB8_ALPHA8 0x8C43
 
-#define SIZE 30
+#define SIZE 200
 
 GrDirectContext* sContext = nullptr;
 SkSurface* sSurface = nullptr;
@@ -135,16 +137,14 @@ void draw_grid(float* grid, SkCanvas* canvas, int N) {
 	float w = ((float) screenWidth) / N;
 	SkPaint paint({0.058823,0.3686274, 0.6117647,1});
 	for(int j = 0; j < N; j++) {
-		float y = (float)j;
 		for(int i = 0; i < N; i++) {
-/*			if(grid[index(i,j,SIZE)] > 0.001) {
+			if(grid[index(i,j,SIZE)] > 0.001) {
 				//paint.setAlphaf(grid[index(i,j,SIZE)]);
 				canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
-			}*/
-			float x = (float)x;
-			float d00 = grid[IX(i,j)];
-			SkPaint paint({1.0f-d00,1.0f, 1.0f-d00,1.0f});
-			canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
+			}
+			// float d00 = grid[IX(i,j)];
+			// SkPaint paint({1.0f-d00,1.0f, 1.0f-d00,1.0f});
+			// canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
 
 
 		}
@@ -163,30 +163,30 @@ bool rightPressed = false;
 bool leftPressed = false;
 
 static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos) {
-/*	xO = x; yO = y;
-	x = xpos; y = ypos;*/
+	xO = x; yO = y;
+	x = xpos; y = ypos;
+	// printf("%d\n",(int)x);
 }
 
 static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-	printf("fdas");
-/*	if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+	if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
 		rightPressed = true;
 	}
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
 		rightPressed = false;
 	}
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-		rightPressed = true;
+		leftPressed = true;
 	}
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-		rightPressed = false;
-	}*/
+		leftPressed = false;
+	}
 }
 
 void process_input(FluidGrid* grid) {
 	if (rightPressed || leftPressed) {
-		int index_x = (int)(xO/screenWidth*SIZE); 
-		int index_y = (int)(yO/screenWidth*SIZE); 
+		int index_x = round((xO/screenWidth)*SIZE); 
+		int index_y = round((yO/screenWidth)*SIZE); 
 
 		if(index_x <= 0 || index_x >= SIZE - 1 || index_y <=0  || index_y >= SIZE - 1) {
 			return;
@@ -195,18 +195,18 @@ void process_input(FluidGrid* grid) {
 		int N = SIZE;
 		// Add velocities
 		if(rightPressed) {
-			grid->u_prev[IX(index_x, index_y)] = 1.0f * (x - xO);
-			grid->v_prev[IX(index_x, index_y)] = 1.0f * (y - yO);
+			grid->u[IX(index_x, index_y)] += 1.0f * (x - xO);
+			grid->v[IX(index_x, index_y)] += 1.0f * (y - yO);
 		} else {
 			// Add density
-			grid->dens_prev[IX(index_x, index_y)] = 10.0f;
+			grid->dens[IX(index_x, index_y)] += 10.0f;
 		}
 		xO = x;
 		yO = y;
 		
-    	add_source(N,grid->u,grid->u_prev, grid->dt);
-    	add_source(N,grid->v,grid->v_prev, grid->dt);
-    	add_source(N,grid->dens,grid->dens_prev, grid->dt);
+    	// add_source(N,grid->u,grid->u_prev, grid->dt);
+    	// add_source(N,grid->v,grid->v_prev, grid->dt);
+    	// add_source(N,grid->dens,grid->dens_prev, grid->dt);
 	}
 } 
 
@@ -214,17 +214,16 @@ int main(void) {
 	// Setup GLFW
 	GLFWwindow* window;
     init_glfw();
-	window = glfwCreateWindow(screenWidth, screenWidth, "Simple example",  glfwGetPrimaryMonitor(), NULL);
+	window = glfwCreateWindow(screenWidth, screenWidth, "Simple example",  NULL, NULL);
 	if (!window) {
 		glfwTerminate();
 		exit(EXIT_FAILURE);
 	}
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
-//	glfwSetCursorPosCallback(window, mouse_position_callback);
+	glfwSetCursorPosCallback(window, mouse_position_callback);
 	
 	glfwMakeContextCurrent(window);
-	//(uncomment to enable correct color spaces) glEnable(GL_FRAMEBUFFER_SRGB);
 
 	init_skia(screenWidth, screenWidth);
 
@@ -243,13 +242,16 @@ int main(void) {
 	canvas->drawPaint(paint);
 	draw_grid(grid_d, canvas, SIZE);
 
-	sContext->flush();
+	// sContext->flush();
 	printf("Sum grid: %f\n", sum(grid_d, SIZE));	
 	glfwSwapBuffers(window);
 
 	// 
 
 	while (!glfwWindowShouldClose(window)) {
+		double xpos, ypos;
+		// glfwGetCursorPos(window, &xpos, &ypos);
+		// printf("%d\n", xpos);
 		//glfwWaitEvents();
 		
 		// Draw blank screen 	
