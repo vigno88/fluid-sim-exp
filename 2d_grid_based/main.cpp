@@ -67,12 +67,14 @@ warning: color-correct spaces don't work in VMWare, because mesa doesn't support
 #include <stdlib.h>
 #include <math.h>
 #include "util.h"
-#include "fluidSolver_1.h"
+#include "fluidSolver_2.h"
 #include <unistd.h>
 
 //uncomment the two lines below to enable correct color spaces
 //#define GL_FRAMEBUFFER_SRGB 0x8DB9
 //#define GL_SRGB8_ALPHA8 0x8C43
+
+#define SIZE 300
 
 GrDirectContext* sContext = nullptr;
 SkSurface* sSurface = nullptr;
@@ -129,21 +131,84 @@ void init_glfw() {
 	glfwWindowHint(GLFW_DEPTH_BITS, 0);
 }
 
-void draw_grid(float* grid, SkCanvas* canvas, int size) {
-	float w = ((float) screenWidth) / size;
+void draw_grid(float* grid, SkCanvas* canvas, int N) {
+	float w = ((float) screenWidth) / N;
 	SkPaint paint({0.058823,0.3686274, 0.6117647,1});
-	for(int j = 0; j < size; j++) {
-		for(int i = 0; i < size; i++) {
-			if(grid[index(i,j,size)] > 0) {
-				printf("value: %f\n", grid[index(i,j,size)]);
-				paint.setAlphaf(grid[index(i,j,size)]);
+	for(int j = 0; j < N; j++) {
+		float y = (float)j;
+		for(int i = 0; i < N; i++) {
+/*			if(grid[index(i,j,SIZE)] > 0.001) {
+				//paint.setAlphaf(grid[index(i,j,SIZE)]);
 				canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
-			}
+			}*/
+			float x = (float)x;
+			float d00 = grid[IX(i,j)];
+			SkPaint paint({1.0f-d00,1.0f, 1.0f-d00,1.0f});
+			canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
+
+
 		}
 	}
 }
 
- 
+void draw_square(SkCanvas* canvas,SkPaint* paint,  float x, float y, float w) {
+	canvas->drawRect({x*w,y*w,(x+1)*w,(y+1)*w},*paint);
+}
+
+
+// Input management
+double x = 0,y = 0;
+double xO = 0,yO = 0;
+bool rightPressed = false;
+bool leftPressed = false;
+
+static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos) {
+	xO = x; yO = y;
+	x = xpos; y = ypos;
+}
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+		rightPressed = true;
+	}
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
+		rightPressed = false;
+	}
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+		rightPressed = true;
+	}
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+		rightPressed = false;
+	}
+}
+
+void process_input(FluidGrid* grid) {
+	if (rightPressed || leftPressed) {
+		int index_x = (int)(xO/screenWidth*SIZE); 
+		int index_y = (int)(yO/screenWidth*SIZE); 
+
+		if(index_x <= 0 || index_x >= SIZE - 1 || index_y <=0  || index_y >= SIZE - 1) {
+			return;
+		}
+
+		int N = SIZE;
+		// Add velocities
+		if(rightPressed) {
+			grid->u_prev[IX(index_x, index_y)] = 1.0f * (x - xO);
+			grid->v_prev[IX(index_x, index_y)] = 1.0f * (y - yO);
+		} else {
+			// Add density
+			grid->dens_prev[IX(index_x, index_y)] = 10.0f;
+		}
+		xO = x;
+		yO = y;
+		
+    	add_source(N,grid->u,grid->u_prev, grid->dt);
+    	add_source(N,grid->v,grid->v_prev, grid->dt);
+    	add_source(N,grid->dens,grid->dens_prev, grid->dt);
+	}
+} 
+
 int main(void) {
 	// Setup GLFW
 	GLFWwindow* window;
@@ -160,41 +225,45 @@ int main(void) {
 
 	glfwSwapInterval(1);
 	glfwSetKeyCallback(window, key_callback);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
+	glfwSetCursorPosCallback(window, mouse_position_callback);
 
 	// Draw to the surface via its SkCanvas.
 	SkCanvas* canvas = sSurface->getCanvas(); // We don't manage this pointer's lifetime.
 	
-	// Create grid Skia points
-	int size = 30;
-	float* grid_d = (float*) calloc(size*size, sizeof(float));
-	solver_init(grid_d, size);
+	//float* grid_d = (float*) calloc(SIZE*size, sizeof(float));
+	float* grid_d = (float*) calloc((SIZE+2)*(SIZE+2), sizeof(float)); // 2
+	solver_init(grid_d, SIZE);
 
 	// Draw initial grid
 	SkPaint paint;
 	paint.setColor(SK_ColorWHITE);
 	canvas->drawPaint(paint);
-	draw_grid(grid_d, canvas, size);
+	draw_grid(grid_d, canvas, SIZE);
 
 	sContext->flush();
-	printf("Sum grid: %f\n", sum(grid_d, size));	
+	printf("Sum grid: %f\n", sum(grid_d, SIZE));	
 	glfwSwapBuffers(window);
 
+	// 
 
 	while (!glfwWindowShouldClose(window)) {
 		//glfwWaitEvents();
-		
+
+		// Draw blank screen 	
 		SkPaint paint;
 		paint.setColor(SK_ColorWHITE);
 		canvas->drawPaint(paint);
-/*		paint.setColor(SK_ColorBLUE);
-		canvas->drawCircle(p,1, paint);
-*/
+
+		// Get input from mouse
+		process_input(grid);
+
 		solver_step();
 		draw_grid(grid_d, canvas, 30);
 		sContext->flush();
-		printf("Sum grid: %f\n", sum(grid_d, size));	
+		// printf("Sum grid: %f\n", sum(grid_d, SIZE));	
 		glfwSwapBuffers(window);
-		sleep(1);
+		//sleep(1);
 	}
 
 	cleanup_skia();

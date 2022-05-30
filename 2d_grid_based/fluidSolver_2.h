@@ -7,9 +7,9 @@
 #include <stdio.h>
 
 
-#define DIFFUSION  0.1
-#define VISCOSITY  0.1
-#define DT 0.1
+#define DIFFUSION  0.0f
+#define VISCOSITY  0.0f
+#define DT 1.0f
 
 #define IX(i,j) ((i)+(N+2)*(j))
 #define SWAP(x0,x) {float *tmp=x0; x0=x; x=tmp;}
@@ -24,6 +24,9 @@ void solver_step();
 void solver_delete();
 
 
+// solver related
+void project(int N, float *u, float *v, float *p, float *div);
+void set_bnd(int N, int b, float *x);
 
 // Implementations 
 struct FluidGrid {
@@ -49,8 +52,9 @@ void FluidGridFree(FluidGrid *grid);
 
 FluidGrid *FluidGridCreate(int size, float* grid_d) {
     FluidGrid *grid = new FluidGrid(); 
+    grid->N = size;
     int N = size;
-    
+
     grid->dt = DT;
     grid->diff = DIFFUSION;
     grid->visc = VISCOSITY;
@@ -79,9 +83,22 @@ void FluidGridFree(FluidGrid *grid) {
     delete(grid);
 }
 
+float sum(float *array, int N) {
+    float sum = 0;
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+            sum += array[IX(i,j)];
+        }
+    }
+    return sum;
+}
+
 // increase the array x by the product of dt and the array s
 void add_source(int N, float *x, float *s, float dt) {
     for(int i = 0; i < (N+2)*(N+2); i++) x[i] += dt*s[i];
+    // set_bnd(N,1,grid->u);
+    // set_bnd(N,2,grid->v);
+    // set_bnd(N,0,grid->dens);
 }
 
 // diffuse takes an array x0, simulate diffusion from it and put it into x
@@ -100,14 +117,16 @@ void diffuse(int N, int b, float *x, float *x0, float diff, float dt ) {
     }
 }
 
+// The advection is implemented by getting previous possible position of a cell
+// By using the negative of the velocities, then interpolate the new value from
+// the values of the 4 closest cell (linear interpolation)
 void advect(int N, int b, float *d, float *d0, float *u, float *v, float dt) {
     float dtN = dt*N; // scale dt by size grid
     
     for(int i = 1; i <= N; i++) {
         for(int j = 1; j <= N; j++) {
-            // x is the current cell pos minus the displacement from this cell x velocity
+            // coords of previous cell (current cell - vel of the cell)
             float x =  i - dtN * u[IX(i,j)];
-            // same then x     
             float y =  j - dtN * v[IX(i,j)];
 
             // Bound values to stay in the grid
@@ -115,11 +134,13 @@ void advect(int N, int b, float *d, float *d0, float *u, float *v, float dt) {
             if(x > N+0.5) x = N+0.5;
             if(y < 0.5) y = 0.5;
             if(y > N+0.5) y = N+0.5;
-            // cast to int
+            
+            // Get index of 4 surrounding cell 
             int i0 = (int) x;
             int i1 = i0+1;
             int j0 = (int) y;
             int j1 = j0+1;
+            // Linear interpolation of the 4 surrounding cell
             float s1 = x - i0; float s0 = 1 - s1; float t1 = y - j0; float t0 = 1-t0;
             d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+s1*(t0*d0[i1,j0]+t1*d0[IX(i1,j0)]);
         }
@@ -128,7 +149,7 @@ void advect(int N, int b, float *d, float *d0, float *u, float *v, float dt) {
 }
 
 void dens_step(int N, float *x, float *x0, float *u, float *v, float diff, float dt) {
-    add_source(N, x, x0, dt);
+ //   add_source(N, x, x0, dt);
     SWAP(x0,x); 
     diffuse(N, 0, x, x0, diff, dt);
     SWAP(x0,x); 
@@ -136,8 +157,8 @@ void dens_step(int N, float *x, float *x0, float *u, float *v, float diff, float
 }
 
 void vel_step(int N, float *u, float *v, float *u0, float *v0, float visc, float dt) {
-    add_source(N, u, u0, dt);
-    add_source(N, v, v0, dt);
+//    add_source(N, u, u0, dt);
+//    add_source(N, v, v0, dt);
     
     SWAP(u0,u); 
     SWAP(v0,v); 
@@ -152,10 +173,12 @@ void vel_step(int N, float *u, float *v, float *u0, float *v0, float visc, float
     project(N, u, v, u0, v0);
 }
 
-// Project get an incrompressible fluid by substracting the gradient field from the velocities of the fluid.
 void project(int N, float *u, float *v, float *p, float *div) {
     float h = 1.0/N;
 
+    // compute the amount of noncompressibility in each cell
+    // The goal is to find if the velocities in the grid introduces compressibility, we do that by checking
+    // if the continuity equatio is valid for each cell
     for(int i = 1; i <= N; i++) {
         for(int j = 1; j<= N; j++) {
             div[IX(i,j)] = -0.5*h*(u[IX(i+1,j)] - u[IX(i-1,j)] + v[IX(i,j+1)] - v[IX(i, j-1)]);
@@ -165,7 +188,7 @@ void project(int N, float *u, float *v, float *p, float *div) {
     set_bnd(N,0,div);
     set_bnd(N,0,p);
 
-    // Gauss-seidel
+    // Gauss-seidel to solve the pressure at each cell
     for(int k = 0; k < 20; k++) {
         for(int i = 1; i<=N; i++) {
             for (int j = 0; j <= N; j++ ) {
@@ -174,8 +197,9 @@ void project(int N, float *u, float *v, float *p, float *div) {
         }
         set_bnd(N,0,p);
     }
+    // Substract the pressure gradient from each cell
     for(int i = 1; i<=N; i++) {
-        for (int j = 0; j <= N; j++ ) {
+        for (int j = 1; j <= N; j++ ) {
             u[IX(i,j)] -= 0.5*(p[IX(i+1,j)] - p[IX(i-1,j)])/h;
             v[IX(i,j)] -= 0.5*(p[IX(i,j+1)] - p[IX(i,j-1)])/h;
         }
@@ -185,7 +209,7 @@ void project(int N, float *u, float *v, float *p, float *div) {
 }
 
 void set_bnd(int N, int b, float *x)  {
-    for (int i = 0; i<=N; i++) {
+    for (int i = 1; i<=N; i++) {
         x[IX(0  ,i)] = b == 1 ? -x[IX(1,i)] : x[IX(1,i)];
         x[IX(N+1,i)] = b == 1 ? -x[IX(N,i)] : x[IX(N,i)];
         x[IX(i,0  )] = b == 2 ? -x[IX(i,1)] : x[IX(i,1)];
@@ -199,18 +223,23 @@ void set_bnd(int N, int b, float *x)  {
 
 
 
-float sum(float *array, int N) {
-    float sum = 0;
-    for(int i = 0; i < N; i++) {
-        for(int j = 0; j < N; j++) {
-            sum += array[IX(i,j)];
-        }
-    }
-    return sum;
-}
 
-void solver_init(float* grid_d,int size) {
-    grid = FluidGridCreate(size, grid_d);
+void solver_init(float* grid_d,int N) {
+    grid = FluidGridCreate(N, grid_d);
+    float* initial_dens = (float*) calloc((N+2) * (N+2), sizeof(float));
+    initial_dens[IX(15,15)] = 10.0;
+    initial_dens[IX(17,15)] = 10.0;
+    initial_dens[IX(16,15)] = 10.0;
+    add_source(N, grid->dens, initial_dens, grid->dt);
+
+    float* initial_velx = (float*) calloc((N+2) * (N+2), sizeof(float));
+    initial_velx[IX(15,15)] = -10.0;
+    initial_velx[IX(16,15)] = -10.0;
+    initial_velx[IX(17,15)] = -10.0;
+
+    add_source(N,grid->u_prev,initial_velx, grid->dt);
+    //add_source(N,grid->v_prev,initial_velx, grid->dt);
+
 }
 
 void solver_step() {
