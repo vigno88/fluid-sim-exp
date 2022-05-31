@@ -14,16 +14,6 @@
 #define IX(i,j) ((i)+(N+2)*(j))
 #define SWAP(x0,x) {float *tmp=x0; x0=x; x=tmp;}
 
-// Pass a grid of points to the solver, the solver will update those points 
-void solver_init(float* grid, int size);
-
-// This will update the grid passed as a pointer at the init
-void solver_step();
-
-// This will delete the ressources acquired for the grid
-void solver_delete();
-
-
 // solver related
 void project(int N, float *u, float *v, float *p, float *div);
 void set_bnd(int N, int b, float *x);
@@ -45,6 +35,7 @@ struct FluidGrid {
     float *v_prev;
 };
 typedef struct FluidGrid FluidGrid;
+
 FluidGrid* grid;
 FluidGrid *FluidGridCreate(int size, float* grid_d);
 void FluidGridFree(FluidGrid *grid);
@@ -91,14 +82,6 @@ float sum(float *array, int N) {
         }
     }
     return sum;
-}
-
-// increase the array x by the product of dt and the array s
-void add_source(int N, float *x, float *s, float dt) {
-    for(int i = 0; i < (N+2)*(N+2); i++) x[i] += dt*s[i];
-    // set_bnd(N,1,grid->u);
-    // set_bnd(N,2,grid->v);
-    // set_bnd(N,0,grid->dens);
 }
 
 // diffuse takes an array x0, simulate diffusion from it and put it into x
@@ -150,17 +133,13 @@ void advect(int N, int b, float *d, float *d0, float *u, float *v, float dt) {
 }
 
 void dens_step(int N, float *x, float *x0, float *u, float *v, float diff, float dt) {
- //   add_source(N, x, x0, dt);
     SWAP(x0,x); 
     diffuse(N, 0, x, x0, diff, dt);
     SWAP(x0,x); 
     advect(N, 0, x, x0, u, v, dt);
 }
 
-void vel_step(int N, float *u, float *v, float *u0, float *v0, float visc, float dt) {
-//    add_source(N, u, u0, dt);
-//    add_source(N, v, v0, dt);
-    
+void vel_step(int N, float *u, float *v, float *u0, float *v0, float visc, float dt) {   
     SWAP(u0,u); 
     SWAP(v0,v); 
     diffuse(N, 1, u, u0, visc, dt);
@@ -222,9 +201,7 @@ void set_bnd(int N, int b, float *x)  {
     x[IX(N+1,N+1)] = 0.5*(x[IX(N,N+1)] + x[IX(N+1,N)]);
 }
 
-
-
-
+// grid_d will be the array used for the density of the fluid
 void solver_init(float* grid_d,int N) {
     grid = FluidGridCreate(N, grid_d);
 }
@@ -232,5 +209,9 @@ void solver_init(float* grid_d,int N) {
 void solver_step() {
     vel_step(grid->N, grid->u, grid->v, grid->u_prev, grid->v_prev, grid->visc, grid->dt);
     dens_step(grid->N, grid->dens, grid->dens_prev, grid->u, grid->v, grid->diff, grid->dt);
+}
+
+void solver_delete() {
+    FluidGridFree(grid);
 }
 #endif

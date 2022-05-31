@@ -135,13 +135,8 @@ void init_glfw() {
 
 void draw_grid(float* grid, SkCanvas* canvas, int N) {
 	float w = ((float) screenWidth) / N;
-	SkPaint paint({0.058823,0.3686274, 0.6117647,1});
 	for(int j = 0; j < N; j++) {
 		for(int i = 0; i < N; i++) {
-			// if(grid[index(i,j,SIZE)] > 0.001) {
-			// 	//paint.setAlphaf(grid[index(i,j,SIZE)]);
-			// 	canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
-			// }
 			float d00 = grid[IX(i,j)];
 			SkPaint paint({1.0f-d00,1.0f, 1.0f-d00,1.0f});
 			canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
@@ -151,12 +146,7 @@ void draw_grid(float* grid, SkCanvas* canvas, int N) {
 	}
 }
 
-void draw_square(SkCanvas* canvas,SkPaint* paint,  float x, float y, float w) {
-	canvas->drawRect({x*w,y*w,(x+1)*w,(y+1)*w},*paint);
-}
-
-
-// Input management
+// Input management - will keep it global for now
 double x = 0,y = 0;
 double xO = 0,yO = 0;
 bool rightPressed = false;
@@ -165,7 +155,6 @@ bool leftPressed = false;
 static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos) {
 	xO = x; yO = y;
 	x = xpos; y = ypos;
-	// printf("%d\n",(int)x);
 }
 
 static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
@@ -203,10 +192,6 @@ void process_input(FluidGrid* grid) {
 		}
 		xO = x;
 		yO = y;
-		
-    	// add_source(N,grid->u,grid->u_prev, grid->dt);
-    	// add_source(N,grid->v,grid->v_prev, grid->dt);
-    	// add_source(N,grid->dens,grid->dens_prev, grid->dt);
 	}
 } 
 
@@ -222,38 +207,18 @@ int main(void) {
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetCursorPosCallback(window, mouse_position_callback);
-	
 	glfwMakeContextCurrent(window);
+	glfwSwapInterval(1);
+
 
 	init_skia(screenWidth, screenWidth);
 
-	glfwSwapInterval(1);
-
-	// Draw to the surface via its SkCanvas.
 	SkCanvas* canvas = sSurface->getCanvas(); // We don't manage this pointer's lifetime.
 	
-	//float* grid_d = (float*) calloc(SIZE*size, sizeof(float));
-	float* grid_d = (float*) calloc((SIZE+2)*(SIZE+2), sizeof(float)); // 2
+	float* grid_d = (float*) calloc((SIZE+2)*(SIZE+2), sizeof(float));
 	solver_init(grid_d, SIZE);
 
-	// Draw initial grid
-	SkPaint paint;
-	paint.setColor(SK_ColorWHITE);
-	canvas->drawPaint(paint);
-	draw_grid(grid_d, canvas, SIZE);
-
-	// sContext->flush();
-	printf("Sum grid: %f\n", sum(grid_d, SIZE));	
-	glfwSwapBuffers(window);
-
-	// 
-
 	while (!glfwWindowShouldClose(window)) {
-		double xpos, ypos;
-		// glfwGetCursorPos(window, &xpos, &ypos);
-		// printf("%d\n", xpos);
-		//glfwWaitEvents();
-		
 		// Draw blank screen 	
 		SkPaint paint;
 		paint.setColor(SK_ColorWHITE);
@@ -265,10 +230,8 @@ int main(void) {
 		solver_step();
 		draw_grid(grid_d, canvas, SIZE);
 		sContext->flush();
-		// printf("Sum grid: %f\n", sum(grid_d, SIZE));	
 		glfwSwapBuffers(window);
 		glfwPollEvents();
-		//sleep(1);
 	}
 
 	cleanup_skia();
