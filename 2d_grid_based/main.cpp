@@ -138,13 +138,13 @@ void draw_grid(float* grid, SkCanvas* canvas, int N) {
 	SkPaint paint({0.058823,0.3686274, 0.6117647,1});
 	for(int j = 0; j < N; j++) {
 		for(int i = 0; i < N; i++) {
-			if(grid[index(i,j,SIZE)] > 0.001) {
-				//paint.setAlphaf(grid[index(i,j,SIZE)]);
-				canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
-			}
-			// float d00 = grid[IX(i,j)];
-			// SkPaint paint({1.0f-d00,1.0f, 1.0f-d00,1.0f});
-			// canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
+			// if(grid[index(i,j,SIZE)] > 0.001) {
+			// 	//paint.setAlphaf(grid[index(i,j,SIZE)]);
+			// 	canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
+			// }
+			float d00 = grid[IX(i,j)];
+			SkPaint paint({1.0f-d00,1.0f, 1.0f-d00,1.0f});
+			canvas->drawRect({i*w,j*w,(i+1)*w,(j+1)*w},paint);
 
 
 		}

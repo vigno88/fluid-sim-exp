@@ -7,8 +7,8 @@
 #include <stdio.h>
 
 
-#define DIFFUSION  0.0f
-#define VISCOSITY  0.0f
+#define DIFFUSION  0.05f
+#define VISCOSITY  0.1f
 #define DT 1.0f
 
 #define IX(i,j) ((i)+(N+2)*(j))
@@ -103,7 +103,7 @@ void add_source(int N, float *x, float *s, float dt) {
 
 // diffuse takes an array x0, simulate diffusion from it and put it into x
 void diffuse(int N, int b, float *x, float *x0, float diff, float dt ) {
-    float a = dt*diff*N*N; // diffusion rate, it is scaled by the number of cells in simulation
+    float a = dt*diff;//*N*N; // diffusion rate, it is scaled by the number of cells in simulation
 
     // Simulate flow using averaging (20 iter) - Gauss-Seidel method
     for(int k = 0; k < 20; k++) {
