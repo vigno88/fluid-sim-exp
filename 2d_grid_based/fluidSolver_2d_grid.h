@@ -1,4 +1,5 @@
 // Source: https://www.dgp.toronto.edu/public_user/stam/reality/Research/pdf/GDC03.pdf
+// kept as a header file for shorter compilation command
 #ifndef FLUID2_H
 #define FLUID2_H
 
@@ -215,3 +216,5 @@ void solver_delete() {
     FluidGridFree(grid);
 }
 #endif
+
+dfsa
